@@ -17,35 +17,48 @@ export class InMemoryStatementsRepository implements IStatementsRepository {
     return statement;
   }
 
-  async findStatementOperation({ statement_id, user_id }: IGetStatementOperationDTO): Promise<Statement | undefined> {
-    return this.statements.find(operation => (
-      operation.id === statement_id &&
-      operation.user_id === user_id
-    ));
+  async findStatementOperation({
+    statement_id,
+    user_id,
+  }: IGetStatementOperationDTO): Promise<Statement | undefined> {
+    return this.statements.find(
+      (operation) =>
+        operation.id === statement_id && operation.user_id === user_id
+    );
   }
 
-  async getUserBalance({ user_id, with_statement = false }: IGetBalanceDTO):
-    Promise<
-      { balance: number } | { balance: number, statement: Statement[] }
-    >
-  {
-    const statement = this.statements.filter(operation => operation.user_id === user_id);
+  async getUserBalance({
+    user_id,
+    with_statement = false,
+  }: IGetBalanceDTO): Promise<
+    { balance: number } | { balance: number; statement: Statement[] }
+  > {
+    const statement = this.statements.filter(
+      (operation) => operation.user_id === user_id
+    );
 
     const balance = statement.reduce((acc, operation) => {
-      if (operation.type === 'deposit') {
-        return acc + operation.amount;
+      if (operation.type === "deposit") {
+        return acc + parseFloat(operation.amount.toString());
+      } else if (operation.type === "withdraw") {
+        return acc - parseFloat(operation.amount.toString());
       } else {
-        return acc - operation.amount;
+        if (operation.sender_id === user_id) {
+          //in this case the user sent the transfer
+          return acc - parseFloat(operation.amount.toString());
+        } else {
+          return acc + parseFloat(operation.amount.toString());
+        }
       }
-    }, 0)
+    }, 0);
 
     if (with_statement) {
       return {
         statement,
-        balance
-      }
+        balance,
+      };
     }
 
-    return { balance }
+    return { balance };
   }
 }
